@@ -25,6 +25,7 @@ logger.add("./log/log_{time}.log")
 # 开始调试
 logger.debug("开始调试")
 
+split = 3
 global_loop = 20
 num_edge = 1
 num_end = 20
@@ -43,7 +44,7 @@ if __name__ == '__main__':
     logger.debug("进行初始化")
     logger.debug("初始化数据集")
     # 训练数据集，测试数据集
-    train_loader_list, test_loader = creat_datasets(num_end)
+    train_loader_list, test_loader = creat_datasets(split)
     # id数据集
     id_class_loader = create_class_loaders(split_by_class(test_loader.dataset, 10))
     # ood数据集
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     end_devices_list = []
     edge_devices_list = []
     for i in range(num_end):
-        end_devices_list.append(End('end', i + 1, ResNet_18(BasicBlock, num_classes=10), train_loader_list[i], test_loader, ood_loader))
+        end_devices_list.append(End('end', i + 1, ResNet_18(BasicBlock, num_classes=10), train_loader_list[random.randint(0,split-1)], test_loader, ood_loader))
     for i in range(num_edge):
         edge_devices_list.append(Edge('edge', i + 1, ResNet_18(BasicBlock, num_classes=10), test_loader))
     controller = Controller(end_devices_list, edge_devices_list, Cloud('cloud', 0, ResNet_18(BasicBlock, num_classes=10)))

@@ -1,61 +1,74 @@
+import random
+
 import torch.nn as nn
 import torch.optim as optim
 
 from loguru import logger
 from datasets import *
 from models import *
-from train import *
+from devices import *
+
+seed_value = 2025  # 设定随机数种子
+
+np.random.seed(seed_value)
+random.seed(seed_value)
+os.environ['PYTHONHASHSEED'] = str(seed_value)  # 为了禁止hash随机化，使得实验可复现。
+
+torch.manual_seed(seed_value)  # 为CPU设置随机种子
+torch.cuda.manual_seed(seed_value)  # 为当前GPU设置随机种子（只用一块GPU）
+torch.cuda.manual_seed_all(seed_value)  # 为所有GPU设置随机种子（多块GPU）
+
+torch.backends.cudnn.deterministic = True
 
 # 创建日志文件
 logger.add("./log/log_{time}.log")
 # 开始调试
 logger.debug("开始调试")
 
-global_loop = 10
+global_loop = 15
 num_edge = 1
-num_end = 1
+num_end = 10
+epoch = 5
 
 
 if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # 初始化模型（注意传入 BasicBlock）
+    '''for epoch in range(1, 100 + 1):
+        train(epoch, model, tra_loader, criterion, optimizer, scheduler)
+        if epoch % 10 == 0:  # 每 10 个 epoch 测试一次
+            test(epoch, model, tes_loader, criterion)'''
+
     logger.debug("开始调试主函数")
-    logger.debug("-----创建数据集-----")
-    # 加载数据集
-    creat_datasets(num_end)
-    # 全局初始化，生成每个终端设备和云服务器的初始模型
-    logger.debug("-----创建初始化模型-----")
-    creat_model(num_end, num_edge)
-    # 训练阶段
-    # for i in 总轮次
-    # 终端设备到边缘服务器训练+聚合
-    # for j in 每个终端设备
-    # 对每一个终端设备进行本地模型训练
-    # 设备聚类，绑定终端设备到边缘服务器
-    # 边缘服务器到云服务器聚合
-    logger.debug("-----开始全局训练轮次-----")
+    logger.debug("进行初始化")
+    logger.debug("初始化数据集")
+    # 训练数据集，测试数据集
+    train_loader_list, test_loader = creat_datasets(num_end)
+    # id数据集
+    id_class_loader = create_class_loaders(split_by_class(test_loader.dataset, 10))
+    # ood数据集
+    ood_data = get_ood_cifar100(1)
+    ood_loader = DataLoader(ood_data, batch_size=32, shuffle=False)
+    ood_class_datasets = split_by_class(ood_data, 100)
+    ood_class_loaders = create_class_loaders(ood_class_datasets, shuffle=False)
+    logger.debug("初始化模型")
+    logger.debug("初始化设备")
+    end_devices_list = []
+    edge_devices_list = []
+    for i in range(num_end):
+        end_devices_list.append(End('end', i + 1, ResNet_18(BasicBlock, num_classes=10), train_loader_list[i], test_loader, ood_loader))
+    for i in range(num_edge):
+        edge_devices_list.append(Edge('edge', i + 1, ResNet_18(BasicBlock, num_classes=10), test_loader))
+    controller = Controller(end_devices_list, edge_devices_list, Cloud('cloud', 0, ResNet_18(BasicBlock, num_classes=10)))
+    logger.debug("开始训练")
     logger.debug(f"总训练轮次：{global_loop}")
     for i in range(global_loop):
-        logger.debug(f"模型训练轮次：{i+1}")
-        for j in range(num_end):
-            logger.debug(f"训练第{j + 1}号终端设备")
-            # 训练代码
-            # 读取模型
-            #model = ResNet_18(BasicBlock, num_classes=10)
-            model = resnet18(num_classes=10)
-            model.load_state_dict(torch.load(f"models/end/end_model_{j + 1}.pth"))
-            # 读取数据
-            tra, tes = get_dataset()
-            dataloader = DataLoader(tra, batch_size=128, shuffle=True)
-            #dataloader = load_dataloader(f"fed_data/end_data_train_{j + 1}.pkl")
-            # 执行训练
-            print(f"Epoch [{i+1}] | ")
-            train(
-                model=model,
-                dataloader=dataloader,
-            )
-            # 存储模型
-            save_model(model, f"models/end/end_model_{j + 1}.pth")
+        controller.model_train(i+1, epoch)
+        controller.model_evaluate(i+1, id_class_loader, ood_class_loaders)
         # 一轮训练完成
-        logger.debug(f"模型聚合轮次：{i+1}")
+
+        logger.debug(f"第{i+1}轮模型聚合")
+        controller.model_cluster(i+1)
         # 执行OOD检测，先得到模型给每个类别输出的特征向量
 
 

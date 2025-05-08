@@ -30,22 +30,28 @@ def get_transform():
         transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
-        ])]
+        ]),
+
+        # 预处理测试集数据函数
+        transforms.Compose([
+            transforms.ToTensor(),
+        ])
+    ]
 
 # test
-def get_dataset():
+def get_dataset(transform_mode):
     # 加载训练集和测试集
     train_dataset = datasets.CIFAR10(
         root='./data',
         train=True,
         download=True,
-        transform=get_transform()[0]
+        transform=get_transform()[transform_mode]
     )
     test_dataset = datasets.CIFAR10(
         root='./data',
         train=False,
         download=True,
-        transform=get_transform()[1]
+        transform=get_transform()[transform_mode]
     )
     return train_dataset, test_dataset
 
@@ -75,12 +81,14 @@ def creat_datasets(
     train_loaders = [DataLoader(Subset(train_dataset, indices), batch_size=32, shuffle=True) for indices in
                      client_indices]
 
-    # 存储训练集
+    return train_loaders, test_loader
+
+    '''# 存储训练集
     for i, train_loader in enumerate(train_loaders):
         # 保存 DataLoader
         save_dataloader(train_loader, f'fed_data/end_data_train_{i + 1}.pkl')
     # 存储测试集
-    save_dataloader(test_loader, 'fed_data/end_data_test.pkl')
+    save_dataloader(test_loader, 'fed_data/end_data_test.pkl')'''
 
 
 def dirichlet_distribution_noniid(dataset, num_clients, alpha):
@@ -123,8 +131,7 @@ def create_class_loaders(class_datasets, batch_size=32, shuffle=True):
         class_loaders[class_idx] = DataLoader(
             subset,
             batch_size=batch_size,
-            shuffle=shuffle,
-            num_workers=0
+            shuffle=shuffle
         )
     return class_loaders
 
@@ -211,7 +218,7 @@ class CIFAR100OODWrapper(CIFAR100):
         self.targets = [target for target in self.targets if target in valid_indices]
 
 '''创建基于cifar-100的OOD数据集'''
-def get_ood_cifar100():
+def get_ood_cifar100(transform_mode):
     # CIFAR-10类别列表
     cifar10_classes = [
         'airplane', 'automobile', 'bird', 'cat', 'deer',
@@ -229,6 +236,6 @@ def get_ood_cifar100():
         root='./data',
         train=False,  # 使用测试集作为OOD数据
         download=True,
-        transform=get_transform()[1],
+        transform=get_transform()[transform_mode],
         exclude_classes=excluded_cifar100_classes
     )

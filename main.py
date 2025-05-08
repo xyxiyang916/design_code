@@ -25,9 +25,9 @@ logger.add("./log/log_{time}.log")
 # 开始调试
 logger.debug("开始调试")
 
-global_loop = 15
+global_loop = 20
 num_edge = 1
-num_end = 10
+num_end = 20
 epoch = 5
 
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
         # 一轮训练完成
 
         logger.debug(f"第{i+1}轮模型聚合")
-        controller.model_cluster(i+1)
+        #controller.model_cluster(i+1)
         # 执行OOD检测，先得到模型给每个类别输出的特征向量
 
 

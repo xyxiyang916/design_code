@@ -201,7 +201,7 @@ def save_cifar10_images_labels(dataset, root_dir='./cifar10_data', image_format=
 
 '''去除排除类别后的cifar100数据集'''
 class CIFAR100OODWrapper(CIFAR100):
-    def __init__(self, exclude_classes, **kwargs):
+    def __init__(self, classes, **kwargs):
         super().__init__(**kwargs)
 
         # 获取CIFAR-100类别到索引的映射
@@ -210,8 +210,9 @@ class CIFAR100OODWrapper(CIFAR100):
         # 筛选有效OOD类别
         valid_indices = [
             i for i, name in enumerate(self.classes)
-            if name not in exclude_classes
+            if name not in classes
         ]
+        print(valid_indices)
 
         # 重构数据
         self.data = [img for i, img in enumerate(self.data) if self.targets[i] in valid_indices]
@@ -220,22 +221,37 @@ class CIFAR100OODWrapper(CIFAR100):
 '''创建基于cifar-100的OOD数据集'''
 def get_ood_cifar100(transform_mode):
     # CIFAR-10类别列表
-    cifar10_classes = [
-        'airplane', 'automobile', 'bird', 'cat', 'deer',
-        'dog', 'frog', 'horse', 'ship', 'truck'
-    ]
+    cifar10_classes = []
     # 需要排除的CIFAR-100细分类别（示例）
     excluded_cifar100_classes = [
-        'baby', 'boy', 'girl', 'man', 'woman',  # 人类类别明显不同
-        'beaver', 'dolphin', 'otter', 'seal',  # 水生动物
-        'maple_tree', 'oak_tree', 'palm_tree',  # 植物类
-        'mountain', 'forest',  # 自然场景
-        'plate', 'bowl', 'bottle'  # 日常物品
-    ]
+    # 飞行器相关
+    "airplane", "jet_airliner", "warplane", "propeller_aircraft", "seaplane",
+    "space_shuttle", "airship", "helicopter", "glider",
+
+    # 陆地车辆相关
+    "automobile", "pickup_truck", "sports_car", "truck", "bus", "minivan",
+    "taxi", "racing_car", "fire_engine", "tractor", "bulldozer", "forklift",
+    "crane", "tow_truck", "dump_truck", "armored_car", "tank",
+
+    # 动物相关
+    "sparrow", "robin", "eagle", "penguin", "ostrich", "peacock", "flamingo",
+    "crow", "hummingbird", "domestic_cat", "tiger", "lion", "leopard", "lynx",
+    "cheetah", "puma", "jaguar", "snow_leopard", "deer", "moose", "elk",
+    "antelope", "gazelle", "reindeer", "impala", "springbok", "kudu", "dog",
+    "wolf", "coyote", "fox", "hyena", "doberman", "collie", "golden_retriever",
+    "dalmatian", "frog", "toad", "tree_frog", "bullfrog", "tadpole",
+    "salamander", "newt", "axolotl", "caecilian", "horse", "zebra", "donkey",
+    "pony", "mule", "unicorn", "camel", "giraffe", "rhinoceros",
+
+    # 船只相关
+    "ship", "sailboat", "yacht", "canoe", "ferry", "submarine", "speedboat",
+    "container_ship", "icebreaker"
+]
+
     return CIFAR100OODWrapper(
         root='./data',
         train=False,  # 使用测试集作为OOD数据
         download=True,
         transform=get_transform()[transform_mode],
-        exclude_classes=excluded_cifar100_classes
+        classes=cifar10_classes
     )

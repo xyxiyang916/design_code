@@ -313,6 +313,54 @@ def test_pic_diff():
 
 from models import *
 from sklearn import manifold
+
+
+def get_ith_filepath(folder_path: str, i: int) -> str:
+	if i == 1:
+		i=0
+	elif i == 10:
+		i=1
+	"""
+    获取文件夹中第i个文件的完整路径 (按文件名排序)
+
+    :param folder_path: 目标文件夹路径
+    :param i: 文件索引 (从0开始)
+    :return: 第i个文件的完整路径
+
+    Raises:
+        NotADirectoryError: 输入路径不是文件夹
+        IndexError: 索引超出文件数量范围
+        FileNotFoundError: 文件夹不存在
+    """
+	# 检查文件夹是否存在
+	if not os.path.exists(folder_path):
+		raise FileNotFoundError(f"文件夹不存在: {folder_path}")
+
+	# 检查输入是否为目录
+	if not os.path.isdir(folder_path):
+		raise NotADirectoryError(f"输入路径不是文件夹: {folder_path}")
+	# 获取文件夹下所有条目，并过滤出文件
+	all_files = [
+		entry for entry in os.listdir(folder_path)
+		if os.path.isfile(os.path.join(folder_path, entry))
+	]
+
+	# 检查是否有文件
+	if not all_files:
+		raise FileNotFoundError(f"文件夹中没有文件: {folder_path}")
+	# 按文件名排序 (升序)
+	sorted_files = sorted(all_files)
+
+	# 检查索引是否越界
+	if i < 0 or i >= len(sorted_files):
+		raise IndexError(f"索引 {i} 超出范围 (0-{len(sorted_files) - 1})")
+	# 拼接完整路径
+	target_file = sorted_files[i]
+	full_path = os.path.join(folder_path, target_file)
+	print(full_path)
+
+	return full_path
+
 def T_SNE():
 	train_data, test_data = get_dataset(1)
 
@@ -328,10 +376,18 @@ def T_SNE():
 	ood_class_loaders = create_class_loaders(ood_class_datasets, shuffle=False)
 
 	model = ResNet_18(BasicBlock, num_classes=10).to(device)
-	model.load_state_dict(torch.load(f"./95%正确率模型.pth"))
+	model.load_state_dict(torch.load(get_ith_filepath(f'./ood/15', 7)))
 
 	id_features, id_result = detect_ood_with_mahalanobis(model, test_class_loaders, test_class_loaders)
 	ood_features, ood_result = detect_ood_with_mahalanobis(model, test_class_loaders, ood_class_loaders)
+	threshold, B_ratio = evaluate_threshold(id_result, ood_result, 95)
+	print(threshold)
+	for i in id_result:
+		print(i)
+	print('------')
+	for i in ood_result:
+		print(i)
+	exit(0)
 
 	label = np.array([0] * len(id_features) + [1] * len(ood_features), dtype='uint8')
 

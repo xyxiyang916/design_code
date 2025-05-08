@@ -88,6 +88,7 @@ class End(Device):
                 correct += predicted.eq(targets).sum().item()
         logger.debug(
             f"device:{self.device_type} | id:{self.device_id} | Loss: {total_loss / (batch_idx + 1):.3f} | Acc: {100. * correct / total:.2f}%")
+        return correct / total
 
     def test_ood(self):
         self.model.eval().to(device)
@@ -114,9 +115,11 @@ class End(Device):
         # 再获取OOD数据集的最短距离结果
         ood_features, ood_result = detect_ood_with_mahalanobis(self.model, id_loader, ood_loader)
         threshold, B_ratio = evaluate_threshold(id_result, ood_result, 95)
+        id_test = self.test_id()
+        return
+        self.save_model(f'./ood/{loop_num}', f'编号：{self.device_id} 测试集正确率：{id_test:.2f} OOD正确率：{B_ratio:.2f}')
         if B_ratio > 0.9:
             self.flag = True
-            self.save_model(f'./ood/{loop_num}', f'id：{self.device_id}')
         logger.debug(f'阈值为：{threshold}，结果为：{B_ratio}')
 
     def cosine_test(self):
@@ -186,7 +189,7 @@ class Controller:
         for end in self.end_devices:
             # 调用终端设备进行训练，默认训练一轮
             end.train(epoch)
-            end.test_id()
+
             #end.test_ood()
 
     def model_evaluate(self, loop_num, id_loader, ood_loader):
@@ -194,8 +197,9 @@ class Controller:
             end.flag = False
         logger.debug(f'进行第{loop_num}次终端模型质量测试')
         for end in self.end_devices:
+            end.test_id()
             # 进行ood和余弦检测，终端设备标记本轮是否参与聚合,双检测全部通过即可
-            end.ood_test(loop_num, id_loader, ood_loader)
+            #end.ood_test(loop_num, id_loader, ood_loader)
             #end.cosine_test()
 
     def model_cluster(self, loop_num):

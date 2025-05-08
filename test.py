@@ -26,7 +26,8 @@ torch.backends.cudnn.deterministic = True
 
 # 原始图像不同类别差异性分析
 #test_pic_diff()
-
+T_SNE()
+exit(0)
 # TSNE图绘制
 model1 = ResNet_18(BasicBlock, num_classes=10)
 model2 = ResNet_18(BasicBlock, num_classes=10)
